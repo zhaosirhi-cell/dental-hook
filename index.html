@@ -407,6 +407,10 @@
     white-space: nowrap;
   }
   .toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+
+  /* 手机号实时校验 */
+  input.error { border-color: var(--danger) !important; box-shadow: 0 0 0 3px rgba(255, 138, 138, 0.12) !important; }
+  .phone-err { display: block; color: var(--danger); font-size: 11.5px; margin-top: 6px; }
 </style>
 </head>
 <body>
@@ -425,7 +429,7 @@
 
   <section class="hero">
     <h1>设备<span class="grad">估价 / 询价</span><br>一个入口搞定</h1>
-    <p>免费估价、高价回收、一手货源。提交后结果 1 分钟内通过微信送达，可验货、带保修、本地服务。</p>
+    <p>免费估价、高价回收、一手货源。提交后结果 1 分钟内通过微信送达，可上门验货、本地维修、售后无忧。</p>
     <div class="pill-row">
       <span class="pill"><b>✓</b> 免费估价</span>
       <span class="pill"><b>✓</b> 高价回收</span>
@@ -459,6 +463,7 @@
           <option>空压机 / 负压机</option>
           <option>其他</option>
         </select>
+        <input type="text" id="sell-type-other" placeholder="请输入具体设备类型" hidden>
       </div>
 
       <div class="row-2">
@@ -470,6 +475,11 @@
           <label>型号</label>
           <input type="text" id="sell-model" placeholder="如：Unident 1300">
         </div>
+      </div>
+
+      <div class="field">
+        <label>购入价 <span class="opt">选填 · 有助于准确估价</span></label>
+        <input type="text" id="sell-price" inputmode="decimal" placeholder="如：8万 或 80000">
       </div>
 
       <div class="row-2">
@@ -486,20 +496,26 @@
           </select>
         </div>
         <div class="field">
-          <label>使用年限</label>
-          <select id="sell-age">
-            <option value="" selected disabled>请选择</option>
-            <option>1 年以内</option>
-            <option>1 - 3 年</option>
-            <option>3 - 5 年</option>
-            <option>5 年以上</option>
+          <label>生产日期</label>
+          <select id="sell-prod-date">
+            <option value="" selected disabled>请选择生产年份</option>
+            <option>2026 年</option>
+            <option>2025 年</option>
+            <option>2024 年</option>
+            <option>2023 年</option>
+            <option>2022 年</option>
+            <option>2021 年</option>
+            <option>2020 年</option>
+            <option>2019 年</option>
+            <option>2018 年及更早</option>
           </select>
         </div>
       </div>
 
       <div class="field">
-        <label>手机号 <span class="opt">选填 · 用于短信发送结果</span></label>
-        <input type="tel" id="sell-phone" inputmode="numeric" maxlength="11" placeholder="建议填写，估价结果短信直达">
+        <label>手机号 <span class="req">*</span></label>
+        <input type="tel" id="sell-phone" inputmode="numeric" maxlength="11" placeholder="用于接收估价结果">
+        <span class="phone-err" id="sell-phone-err" hidden>请输入正确的 11 位手机号</span>
       </div>
 
       <div class="field">
@@ -511,7 +527,7 @@
         <div class="thumb-row" id="sell-thumbs"></div>
       </div>
 
-      <p class="hint">提交后请<span class="warn">扫码添加微信</span>领取详细估价报告；照片越清晰，微信里给的精确价越准。</p>
+      <p class="hint">提交后请<span class="warn">立即扫码添加微信</span>，专业评估师 1 分钟内为您出具精准估价报告（建议上传照片，估价更准）。</p>
 
       <button class="submit" type="submit" id="btn-sell">免费获取估价</button>
     </form>
@@ -564,9 +580,9 @@
 
   <section class="trust">
     <div class="items">
-      <span><b>✓</b> 可上门验货</span>
-      <span><b>✓</b> 带保修</span>
-      <span><b>✓</b> 本地服务</span>
+      <span><b>✓</b> 上门验货</span>
+      <span><b>✓</b> 本地维修</span>
+      <span><b>✓</b> 售后无忧</span>
     </div>
     <div class="foot">本页面仅供设备估价与询价，不构成交易承诺</div>
   </section>
@@ -643,6 +659,20 @@
   });
 
   /* ---------- 手机号校验（填了就必须是合法11位手机号） ---------- */
+  /* ---------- 手机号实时格式校验 ---------- */
+  $('#sell-phone').addEventListener('input', () => {
+    const v = $('#sell-phone').value.trim();
+    const ok = /^1[3-9]\d{9}$/.test(v);
+    const showErr = v.length > 0 && !ok;
+    $('#sell-phone').classList.toggle('error', showErr);
+    $('#sell-phone-err').hidden = !showErr;
+  });
+
+  /* ---------- 设备类型「其他」显示自定义输入 ---------- */
+  $('#sell-type').addEventListener('change', () => {
+    $('#sell-type-other').hidden = $('#sell-type').value !== '其他';
+  });
+
   function validPhone(v) {
     if (!v) return true;                 // 选填：空则放行
     return /^1[3-9]\d{9}$/.test(v.trim());
@@ -714,7 +744,7 @@
 
   /* ---------- 估价结果计算 ---------- */
   function calcPrice(type, cond) {
-    const base = BASE_PRICE[type]; if (!base) return '';
+    const base = BASE_PRICE[type] || BASE_PRICE['其他']; if (!base) return '';
     const f = COND_FACTOR[cond] || 0.7;
     const lo = base[0] * f, hi = base[1] * f;
     const mid = (lo + hi) / 2;
@@ -727,15 +757,20 @@
       </div>`;
   }
 
-  /* ---------- 本地留存（演示；生产环境替换为后端接口上报） ---------- */
+  /* ---------- 线索上报：本地留存 + 邮箱接收（FormSubmit） ---------- */
+  const EMAIL_TO = 'zhaosirhi@foxmail.com';
   function saveLead(payload) {
-    // TODO: 生产环境在这里把 payload POST 到你的后端 / 短信服务 / 微信服务
     try {
       const list = JSON.parse(localStorage.getItem('dental_leads') || '[]');
       list.push({ ...payload, time: new Date().toISOString() });
       localStorage.setItem('dental_leads', JSON.stringify(list));
     } catch (e) {}
     console.log('[Lead]', payload);
+    fetch('https://formsubmit.co/ajax/' + EMAIL_TO, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
+      body: JSON.stringify(payload),
+    }).then(r => r.json()).catch(() => {});
   }
 
   /* ---------- 卖家照片预览（本地；生产环境需上传后端/OSS） ---------- */
@@ -772,16 +807,33 @@
 
   $('#form-sell').addEventListener('submit', (e) => {
     e.preventDefault();
-    const type = $('#sell-type').value, cond = $('#sell-cond').value;
+    let type = $('#sell-type').value;
+    const cond = $('#sell-cond').value;
     const phone = $('#sell-phone').value.trim();
     if (!type || !cond) { showToast('请选择设备类型与成色'); return; }
+    if (type === '其他') {
+      const other = $('#sell-type-other').value.trim();
+      if (!other) { showToast('请填写具体设备类型'); return; }
+      type = other;
+    }
+    if (!phone) { showToast('请填写手机号'); return; }
     if (!validPhone(phone)) { showToast('手机号格式不正确'); return; }
     const btn = $('#btn-sell');
     loading(btn, true);
     setTimeout(() => {
       loading(btn, false);
       const remark = $('#sell-model').value || type;
-      saveLead({ kind: 'sell', type, brand: $('#sell-brand').value, model: $('#sell-model').value, cond, age: $('#sell-age').value, phone });
+      saveLead({
+        '类型': '我要卖 · 估价',
+        '设备类型': type,
+        '品牌': $('#sell-brand').value,
+        '型号': $('#sell-model').value,
+        '购入价': $('#sell-price').value,
+        '成色': cond,
+        '生产日期': $('#sell-prod-date').value,
+        '手机号': phone,
+        '照片': thumbs.length + ' 张',
+      });
       showModal({
         title: '参考估价已出',
         desc: '市场参考价已按三档列出，精确回收价取决于实拍成色与品牌型号。',
@@ -801,7 +853,13 @@
     loading(btn, true);
     setTimeout(() => {
       loading(btn, false);
-      saveLead({ kind: 'buy', type, pref: $('#buy-pref').value, budget, phone });
+      saveLead({
+        '类型': '我要买 · 询价',
+        '想买设备': type,
+        '品牌偏好': $('#buy-pref').value,
+        '预算': budget,
+        '手机号': phone,
+      });
       showModal({
         title: '询价已收到',
         desc: '这款设备现货与实拍图已备好，先到先得。',
