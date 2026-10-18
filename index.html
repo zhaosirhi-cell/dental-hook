@@ -548,28 +548,32 @@
           <option>空压机 / 负压机</option>
           <option>其他</option>
         </select>
+        <input type="text" id="buy-type-other" placeholder="请输入具体设备类型" hidden>
       </div>
 
       <div class="field">
         <label>品牌 / 型号偏好</label>
-        <input type="text" id="buy-pref" placeholder="如：卡瓦、菲曼特、不限品牌">
+        <input type="text" id="buy-pref" placeholder="如：啄木鸟、维润、不限品牌">
       </div>
 
       <div class="field">
         <label>预算范围 <span class="req">*</span></label>
         <select id="buy-budget" required>
           <option value="" selected disabled>请选择预算</option>
-          <option>1 万以内</option>
-          <option>1 - 5 万</option>
-          <option>5 - 15 万</option>
-          <option>15 - 30 万</option>
-          <option>30 万以上</option>
+          <option>1000 元以内</option>
+          <option>1000 - 2000 元</option>
+          <option>2000 - 5000 元</option>
+          <option>5000 - 10000 元</option>
+          <option>1万 - 5万</option>
+          <option>5万 - 10万</option>
+          <option>10万以上</option>
         </select>
       </div>
 
       <div class="field">
-        <label>手机号 <span class="opt">选填 · 用于短信通知报价</span></label>
-        <input type="tel" id="buy-phone" inputmode="numeric" maxlength="11" placeholder="建议填写，报价短信直达">
+        <label>手机号 <span class="req">*</span></label>
+        <input type="tel" id="buy-phone" inputmode="numeric" maxlength="11" placeholder="必填，用于接收报价">
+        <span class="phone-err" id="buy-phone-err" hidden>请输入正确的 11 位手机号</span>
       </div>
 
       <p class="hint">提交后请<span class="warn">扫码添加微信</span>，现货报价与图片 1 分钟内送达。</p>
@@ -671,6 +675,19 @@
   /* ---------- 设备类型「其他」显示自定义输入 ---------- */
   $('#sell-type').addEventListener('change', () => {
     $('#sell-type-other').hidden = $('#sell-type').value !== '其他';
+  });
+
+  /* ---------- 询价端：手机号实时校验 + 「其他」自定义输入 ---------- */
+  $('#buy-phone').addEventListener('input', () => {
+    const v = $('#buy-phone').value.trim();
+    const ok = /^1[3-9]\d{9}$/.test(v);
+    const showErr = v.length > 0 && !ok;
+    $('#buy-phone').classList.toggle('error', showErr);
+    $('#buy-phone-err').hidden = !showErr;
+  });
+
+  $('#buy-type').addEventListener('change', () => {
+    $('#buy-type-other').hidden = $('#buy-type').value !== '其他';
   });
 
   function validPhone(v) {
@@ -845,9 +862,16 @@
 
   $('#form-buy').addEventListener('submit', (e) => {
     e.preventDefault();
-    const type = $('#buy-type').value, budget = $('#buy-budget').value;
+    let type = $('#buy-type').value;
+    const budget = $('#buy-budget').value;
     const phone = $('#buy-phone').value.trim();
     if (!type || !budget) { showToast('请选择设备类型与预算'); return; }
+    if (type === '其他') {
+      const other = $('#buy-type-other').value.trim();
+      if (!other) { showToast('请填写具体设备类型'); return; }
+      type = other;
+    }
+    if (!phone) { showToast('请填写手机号'); return; }
     if (!validPhone(phone)) { showToast('手机号格式不正确'); return; }
     const btn = $('#btn-buy');
     loading(btn, true);
